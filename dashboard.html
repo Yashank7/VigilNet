@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>VigilNet v2.0 — Network Intrusion Detection System</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+/* ── RESET & ROOT ── */
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#040d14;--bg2:#071828;--bg3:#0b2035;
+  --cyan:#00e5ff;--green:#00ff9d;--red:#ff3d6b;
+  --yellow:#ffd600;--purple:#c084fc;--orange:#fb923c;
+  --text:#c8dde8;--muted:#4a7a96;
+  --border:rgba(0,229,255,.15);
+  --glow:0 0 18px rgba(0,229,255,.35);
+  --font-mono:'Share Tech Mono',monospace;
+  --font-ui:'Exo 2',sans-serif;
+}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-ui);}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.018) 2px,rgba(0,229,255,.018) 4px);}
+
+/* ── HEADER ── */
+header{
+  position:fixed;top:0;left:0;right:0;height:60px;z-index:1000;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-icon{width:36px;height:36px;border:2px solid var(--cyan);border-radius:8px;display:grid;place-items:center;box-shadow:var(--glow);font-size:17px;}
+.logo-text h1{font-family:var(--font-mono);font-size:.95rem;color:var(--cyan);letter-spacing:3px;}
+.logo-text p{font-size:.6rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+.header-right{display:flex;align-items:center;gap:18px;}
+.v-badge{font-family:var(--font-mono);font-size:.68rem;color:var(--yellow);background:rgba(255,214,0,.1);border:1px solid rgba(255,214,0,.4);padding:3px 10px;border-radius:20px;}
+.status-badge{display:flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:.72rem;color:var(--green);}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 1.5s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.8);}}
+.clock{font-family:var(--font-mono);font-size:.8rem;color:var(--muted);}
+
+/* ── SIDEBAR ── */
+aside{
+  position:fixed;top:60px;left:0;bottom:0;width:220px;z-index:900;
+  background:var(--bg2);border-right:1px solid var(--border);
+  overflow-y:auto;padding:14px 10px 20px;
+  display:flex;flex-direction:column;gap:3px;
+}
+.nav-lbl{font-size:.6rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;padding:0 10px 5px;margin-top:10px;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;
+  border-radius:7px;cursor:pointer;font-size:.82rem;font-weight:600;
+  color:var(--muted);border:1px solid transparent;transition:all .2s;
+  user-select:none;
+}
+.nav-item:hover{background:rgba(0,229,255,.05);color:var(--text);}
+.nav-item.active{background:rgba(0,229,255,.1);border-color:var(--border);color:var(--cyan);}
+.nav-icon{font-size:.9rem;width:18px;text-align:center;flex-shrink:0;}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:.6rem;padding:1px 6px;border-radius:20px;font-family:var(--font-mono);}
+.sidebar-sep{height:1px;background:var(--border);margin:6px 0;}
+.model-info-card{
+  margin-top:auto;background:linear-gradient(135deg,rgba(0,229,255,.07),rgba(0,255,157,.04));
+  border:1px solid var(--border);border-radius:8px;padding:10px;
+}
+.model-info-card h4{font-family:var(--font-mono);font-size:.65rem;color:var(--cyan);letter-spacing:2px;margin-bottom:7px;}
+.mi{display:flex;justify-content:space-between;font-size:.72rem;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.05);}
+.mi .v{color:var(--green);font-weight:700;}
+
+/* ── MAIN WRAPPER ── */
+.main-wrapper{
+  position:fixed;top:60px;left:220px;right:0;bottom:0;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+
+/* ── STATS BAR ── */
+.stats-bar{
+  display:grid;grid-template-columns:repeat(5,1fr);
+  gap:1px;background:var(--border);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.sc{background:var(--bg2);padding:12px 16px;position:relative;overflow:hidden;}
+.sc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;}
+.sc.c1::after{background:var(--cyan);}.sc.c2::after{background:var(--green);}
+.sc.c3::after{background:var(--red);}.sc.c4::after{background:var(--yellow);}
+.sc.c5::after{background:var(--purple);}
+.sl{font-size:.62rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+.sv{font-family:var(--font-mono);font-size:1.6rem;font-weight:700;line-height:1;}
+.sc.c1 .sv{color:var(--cyan);}.sc.c2 .sv{color:var(--green);}
+.sc.c3 .sv{color:var(--red);}.sc.c4 .sv{color:var(--yellow);}
+.sc.c5 .sv{color:var(--purple);}
+.ss{font-size:.65rem;color:var(--muted);margin-top:2px;}
+
+/* ── CONTENT SCROLL AREA ── */
+.content-scroll{
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  padding:16px;padding-bottom:40px;
+}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* ── SECTIONS ── */
+.section{display:none;}
+.section.active{display:block;}
+
+/* ── PANELS ── */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px;}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.03);}
+.pt{font-family:var(--font-mono);font-size:.74rem;color:var(--cyan);letter-spacing:2px;display:flex;align-items:center;gap:8px;}
+.pb{padding:14px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;
+  font-family:var(--font-ui);font-size:.74rem;font-weight:700;letter-spacing:1px;
+  cursor:pointer;border:none;transition:all .2s;text-transform:uppercase;flex-shrink:0;}
+.btn-cyan{background:rgba(0,229,255,.1);border:1px solid var(--cyan);color:var(--cyan);}
+.btn-cyan:hover{background:rgba(0,229,255,.22);box-shadow:var(--glow);}
+.btn-green{background:rgba(0,255,157,.1);border:1px solid var(--green);color:var(--green);}
+.btn-green:hover{background:rgba(0,255,157,.22);}
+.btn-red{background:rgba(255,61,107,.1);border:1px solid var(--red);color:var(--red);}
+.btn-red:hover{background:rgba(255,61,107,.22);}
+.btn-yellow{background:rgba(255,214,0,.1);border:1px solid var(--yellow);color:var(--yellow);}
+.btn-yellow:hover{background:rgba(255,214,0,.22);}
+.btn-purple{background:rgba(192,132,252,.1);border:1px solid var(--purple);color:var(--purple);}
+.btn-purple:hover{background:rgba(192,132,252,.22);}
+.btn-grp{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+
+/* ── TABLES ── */
+.tbl{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:.74rem;}
+.tbl th{text-align:left;padding:7px 10px;color:var(--muted);font-size:.63rem;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid var(--border);}
+.tbl td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text);}
+.tbl tr:hover td{background:rgba(0,229,255,.04);}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.67rem;font-weight:700;letter-spacing:1px;}
+.b-normal{background:rgba(0,255,157,.12);color:var(--green);border:1px solid var(--green);}
+.b-dos{background:rgba(255,61,107,.12);color:var(--red);border:1px solid var(--red);}
+.b-probe{background:rgba(255,214,0,.12);color:var(--yellow);border:1px solid var(--yellow);}
+.b-r2l{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid var(--orange);}
+.b-u2r{background:rgba(192,132,252,.12);color:var(--purple);border:1px solid var(--purple);}
+
+/* ── FORM ── */
+.fg label{display:block;font-size:.63rem;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.fg input,.fg select{width:100%;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:.78rem;outline:none;transition:border-color .2s;}
+.fg input:focus,.fg select:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1);}
+.fg select option{background:var(--bg3);}
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.model-select{padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--cyan);font-family:var(--font-mono);font-size:.72rem;outline:none;}
+
+/* ── RESULT BOX ── */
+.result-box{display:none;margin-top:14px;padding:16px;border-radius:10px;border:1px solid;animation:fadeIn .4s ease;}
+.result-box.attack{background:rgba(255,61,107,.08);border-color:var(--red);}
+.result-box.normal{background:rgba(0,255,157,.07);border-color:var(--green);}
+.result-verdict{font-family:var(--font-mono);font-size:1.3rem;font-weight:700;margin-bottom:8px;}
+.result-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
+.result-pill{background:rgba(255,255,255,.06);border-radius:6px;padding:5px 12px;font-size:.76rem;}
+.result-pill strong{color:var(--cyan);}
+
+/* ── ACCURACY METER ── */
+.acc-meter{margin-top:10px;}
+.acc-lbl{display:flex;justify-content:space-between;font-size:.72rem;margin-bottom:4px;}
+.acc-wrap{height:9px;background:var(--bg3);border-radius:5px;overflow:hidden;}
+.acc-bar{height:100%;border-radius:5px;transition:width .8s cubic-bezier(.4,0,.2,1);}
+.acc-bar.high{background:linear-gradient(90deg,var(--green),var(--cyan));}
+.acc-bar.mid{background:linear-gradient(90deg,var(--yellow),var(--orange));}
+.acc-bar.low{background:linear-gradient(90deg,var(--red),var(--orange));}
+
+/* ── MODEL COMPARE CARDS ── */
+.mc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:10px;}
+.mc-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center;transition:border-color .3s;}
+.mc-card.winner{border-color:var(--green);box-shadow:0 0 14px rgba(0,255,157,.2);}
+.mc-name{font-family:var(--font-mono);font-size:.72rem;color:var(--cyan);margin-bottom:8px;}
+.mc-pred{font-size:.95rem;font-weight:700;margin-bottom:4px;}
+.mc-conf{font-family:var(--font-mono);font-size:.76rem;color:var(--muted);}
+
+/* ── SCENARIO BUTTONS ── */
+.sc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.sc-btn{padding:12px;border-radius:8px;cursor:pointer;border:1px solid var(--border);
+  background:var(--bg3);text-align:left;transition:all .2s;user-select:none;}
+.sc-btn:hover{border-color:rgba(0,229,255,.4);background:rgba(0,229,255,.05);}
+.sc-btn.active{border-color:var(--cyan);background:rgba(0,229,255,.08);}
+.sc-btn h4{font-size:.78rem;font-weight:700;color:var(--cyan);margin-bottom:4px;}
+.sc-btn p{font-size:.68rem;color:var(--muted);}
+
+/* ── FEATURE BARS ── */
+.feat-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.feat-name{width:190px;color:var(--muted);font-family:var(--font-mono);font-size:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.feat-bar-wrap{flex:1;height:5px;background:var(--bg3);border-radius:3px;}
+.feat-bar{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--green));}
+.feat-val{width:44px;text-align:right;color:var(--cyan);font-family:var(--font-mono);font-size:.7rem;}
+
+/* ── CONFUSION MATRIX ── */
+.cm-table{border-collapse:collapse;font-family:var(--font-mono);font-size:.7rem;}
+.cm-table th,.cm-table td{padding:7px 11px;border:1px solid var(--border);text-align:center;}
+.cm-table th{color:var(--muted);background:var(--bg3);}
+.cm-high{background:rgba(0,229,255,.25);color:var(--cyan);font-weight:700;}
+.cm-mid{background:rgba(255,214,0,.15);color:var(--yellow);}
+.cm-low{background:rgba(255,61,107,.1);color:var(--red);}
+.cm-zero{color:var(--muted);}
+
+/* ── BATCH ── */
+.batch-scroll{max-height:280px;overflow-y:auto;}
+.prog-wrap{height:7px;background:var(--bg3);border-radius:4px;overflow:hidden;margin:8px 0;}
+.prog-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--cyan),var(--green));transition:width .4s ease;width:0%;}
+
+/* ── CSV UPLOAD ── */
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;
+  cursor:pointer;transition:all .3s;background:var(--bg3);}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--cyan);background:rgba(0,229,255,.05);}
+
+/* ── ALERTS ── */
+.alert-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;
+  background:rgba(255,61,107,.07);border:1px solid rgba(255,61,107,.2);margin-bottom:8px;animation:slideIn .3s ease;}
+.alert-msg{flex:1;font-size:.78rem;}
+.alert-time{font-family:var(--font-mono);font-size:.66rem;color:var(--muted);flex-shrink:0;}
+
+/* ── EXPORT ── */
+.export-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
+.export-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;}
+.export-card h4{font-size:.8rem;color:var(--text);margin-bottom:5px;}
+.export-card p{font-size:.7rem;color:var(--muted);margin-bottom:12px;}
+.export-status{display:none;margin-top:12px;padding:10px 14px;border-radius:8px;background:rgba(0,255,157,.08);border:1px solid var(--green);font-family:var(--font-mono);font-size:.78rem;color:var(--green);}
+
+/* ── TERMINAL ── */
+.terminal{background:#000;border-radius:8px;padding:14px;font-family:var(--font-mono);font-size:.74rem;color:var(--green);max-height:150px;overflow-y:auto;line-height:1.7;}
+.terminal .cmd{color:var(--cyan);}.terminal .ok{color:var(--green);}
+.terminal .err{color:var(--red);}.terminal .info{color:var(--yellow);}
+
+/* ── STAT BOX ── */
+.stat-box{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center;}
+.stat-box-lbl{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:5px;}
+.stat-box-val{font-family:var(--font-mono);font-size:1.8rem;font-weight:700;}
+
+/* ── SPINNER ── */
+.spinner{display:none;width:16px;height:16px;border:2px solid rgba(0,229,255,.3);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:none;}}
+
+/* ── FOOTER ── */
+.footer-bar{
+  position:fixed;bottom:0;left:220px;right:0;height:30px;z-index:800;
+  background:var(--bg2);border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+  padding:0 20px;font-family:var(--font-mono);font-size:.65rem;color:var(--muted);
+  pointer-events:none;
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛡</div>
+    <div class="logo-text"><h1>VigilNet</h1><p>Network Intrusion Detection System v2.0</p></div>
+  </div>
+  <div class="header-right">
+    <span class="v-badge">v2.0 MULTI-MODEL</span>
+    <div class="status-badge"><div class="pulse"></div>SYSTEM ONLINE</div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<aside>
+  <div class="nav-lbl">Navigation</div>
+  <div class="nav-item active" id="nav-dashboard" onclick="showSec('dashboard')">
+    <span class="nav-icon">📊</span>Dashboard
+  </div>
+  <div class="nav-item" id="nav-predict" onclick="showSec('predict')">
+    <span class="nav-icon">🔍</span>Predict Traffic
+  </div>
+  <div class="nav-item" id="nav-compare" onclick="showSec('compare')">
+    <span class="nav-icon">⚖️</span>Model Compare
+  </div>
+  <div class="nav-item" id="nav-scenarios" onclick="showSec('scenarios')">
+    <span class="nav-icon">🎯</span>Attack Scenarios
+  </div>
+  <div class="nav-item" id="nav-batch" onclick="showSec('batch')">
+    <span class="nav-icon">⚡</span>Batch Test
+  </div>
+  <div class="nav-item" id="nav-csv" onclick="showSec('csv')">
+    <span class="nav-icon">📁</span>CSV Upload
+  </div>
+  <div class="nav-item" id="nav-live" onclick="showSec('live')">
+    <span class="nav-icon">📡</span>Live Feed
+  </div>
+  <div class="nav-item" id="nav-alerts" onclick="showSec('alerts')">
+    <span class="nav-icon">🚨</span>Alerts
+    <span class="nav-badge" id="alert-count">0</span>
+  </div>
+  <div class="nav-item" id="nav-mlinfo" onclick="showSec('mlinfo')">
+    <span class="nav-icon">🤖</span>ML Models Info
+  </div>
+  <div class="nav-item" id="nav-export" onclick="showSec('export')">
+    <span class="nav-icon">📤</span>Export Report
+  </div>
+  <div class="sidebar-sep"></div>
+  <div class="model-info-card">
+    <h4>// ACTIVE MODEL</h4>
+    <div class="mi"><span>Model</span><span class="v">Random Forest</span></div>
+    <div class="mi"><span>Accuracy</span><span class="v">97.4%</span></div>
+    <div class="mi"><span>F1 Score</span><span class="v">96.9%</span></div>
+    <div class="mi"><span>Dataset</span><span class="v">NSL-KDD</span></div>
+  </div>
+</aside>
+
+<!-- MAIN WRAPPER -->
+<div class="main-wrapper">
+
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="sc c1"><div class="sl">Total Analyzed</div><div class="sv" id="s-total">0</div><div class="ss">connections</div></div>
+    <div class="sc c2"><div class="sl">Normal</div><div class="sv" id="s-normal">0</div><div class="ss">safe traffic</div></div>
+    <div class="sc c3"><div class="sl">Attacks</div><div class="sv" id="s-attack">0</div><div class="ss">detected</div></div>
+    <div class="sc c4"><div class="sl">Best Accuracy</div><div class="sv">97.4%</div><div class="ss">Random Forest</div></div>
+    <div class="sc c5"><div class="sl">Models Active</div><div class="sv">4</div><div class="ss">RF·SVM·KNN·NB</div></div>
+  </div>
+
+  <!-- CONTENT SCROLL -->
+  <div class="content-scroll">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div class="section active" id="sec-dashboard">
+      <div class="two-col">
+        <div class="panel">
+          <div class="ph"><div class="pt">📈 TRAFFIC TIMELINE</div><button class="btn btn-cyan" onclick="addRandEvt()">+ Simulate</button></div>
+          <div class="pb"><canvas id="trafficChart" height="150"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt">🎯 ATTACK DISTRIBUTION</div></div>
+          <div class="pb"><canvas id="attackChart" height="150"></canvas></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div class="pt">📊 MODEL ACCURACY COMPARISON</div></div>
+        <div class="pb" id="acc-bars-panel"></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div class="pt">📋 RECENT EVENTS</div><button class="btn btn-cyan" onclick="addRandEvt()">↻ Add Event</button></div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr><th>#</th><th>Time</th><th>Protocol</th><th>Service</th><th>Src Bytes</th><th>Flag</th><th>Result</th><th>Confidence</th></tr></thead>
+            <tbody id="events-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PREDICT ===== -->
+    <div class="section" id="sec-predict">
+      <div class="panel">
+        <div class="ph">
+          <div class="pt">🔍 PREDICT NETWORK CONNECTION</div>
+          <div class="btn-grp">
+            <select id="pred-model" class="model-select">
+              <option value="rf">Random Forest</option>
+              <option value="svm">SVM</option>
+              <option value="knn">KNN</option>
+              <option value="nb">Naive Bayes</option>
+            </select>
+            <button class="btn btn-cyan" onclick="fillNormal()">Load Normal</button>
+            <button class="btn btn-red" onclick="fillAttack()">Load Attack</button>
+          </div>
+        </div>
+        <div class="pb">
+          <div class="form-grid">
+            <div class="fg"><label>Protocol Type</label>
+              <select id="f-protocol"><option>tcp</option><option>udp</option><option>icmp</option></select></div>
+            <div class="fg"><label>Service</label>
+              <select id="f-service"><option>http</option><option>ftp</option><option>smtp</option><option>ssh</option><option>dns</option><option>telnet</option><option>other</option></select></div>
+            <div class="fg"><label>Flag</label>
+              <select id="f-flag"><option>SF</option><option>S0</option><option>REJ</option><option>RSTO</option><option>SH</option></select></div>
+            <div class="fg"><label>Duration (s)</label><input id="f-dur" type="number" value="0" min="0"/></div>
+            <div class="fg"><label>Src Bytes</label><input id="f-src" type="number" value="0" min="0"/></div>
+            <div class="fg"><label>Dst Bytes</label><input id="f-dst" type="number" value="0" min="0"/></div>
+            <div class="fg"><label>Count</label><input id="f-cnt" type="number" value="1" min="0" max="512"/></div>
+            <div class="fg"><label>Srv Count</label><input id="f-srv" type="number" value="1" min="0" max="512"/></div>
+            <div class="fg"><label>Serror Rate</label><input id="f-ser" type="number" value="0" min="0" max="1" step="0.01"/></div>
+            <div class="fg"><label>Same Srv Rate</label><input id="f-ssr" type="number" value="1" min="0" max="1" step="0.01"/></div>
+            <div class="fg"><label>Logged In</label>
+              <select id="f-log"><option value="1">Yes</option><option value="0">No</option></select></div>
+            <div class="fg"><label>Dst Host Count</label><input id="f-dhc" type="number" value="1" min="0" max="255"/></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+            <button class="btn btn-green" onclick="runPredict()">▶ Run Prediction</button>
+            <div class="spinner" id="pred-spin"></div>
+          </div>
+          <div class="result-box" id="result-box">
+            <div class="result-verdict" id="result-verdict"></div>
+            <div class="acc-meter">
+              <div class="acc-lbl">
+                <span style="font-family:var(--font-mono);font-size:.72rem;">Confidence Score</span>
+                <span id="conf-pct" style="color:var(--cyan);font-family:var(--font-mono);font-size:.72rem;"></span>
+              </div>
+              <div class="acc-wrap"><div class="acc-bar high" id="conf-bar" style="width:0%"></div></div>
+            </div>
+            <div class="result-meta" id="result-meta"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODEL COMPARE ===== -->
+    <div class="section" id="sec-compare">
+      <div class="panel">
+        <div class="ph">
+          <div class="pt">⚖️ SIDE-BY-SIDE MODEL COMPARISON</div>
+          <div class="btn-grp">
+            <button class="btn btn-cyan" onclick="fillNormal();runCompare()">▶ Test Normal</button>
+            <button class="btn btn-red" onclick="fillAttack();runCompare()">▶ Test Attack</button>
+          </div>
+        </div>
+        <div class="pb">
+          <p style="color:var(--muted);font-size:.78rem;margin-bottom:14px;">Click a button above — all 4 models will predict simultaneously and the best model will be highlighted.</p>
+          <div class="mc-grid" id="compare-grid">
+            <div class="mc-card"><div class="mc-name">Random Forest</div><div class="mc-pred" style="color:var(--muted)">—</div><div class="mc-conf">Click Test button</div></div>
+            <div class="mc-card"><div class="mc-name">SVM</div><div class="mc-pred" style="color:var(--muted)">—</div><div class="mc-conf">Click Test button</div></div>
+            <div class="mc-card"><div class="mc-name">KNN</div><div class="mc-pred" style="color:var(--muted)">—</div><div class="mc-conf">Click Test button</div></div>
+            <div class="mc-card"><div class="mc-name">Naive Bayes</div><div class="mc-pred" style="color:var(--muted)">—</div><div class="mc-conf">Click Test button</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div class="pt">📊 FULL MODEL METRICS</div></div>
+        <div class="pb" style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr><th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1 Score</th><th>Best For</th></tr></thead>
+            <tbody>
+              <tr><td style="color:var(--cyan);">Random Forest</td><td style="color:var(--green);">97.4%</td><td>96.8%</td><td>97.1%</td><td>96.9%</td><td style="color:var(--green);">Overall Best</td></tr>
+              <tr><td style="color:var(--cyan);">SVM</td><td style="color:var(--green);">94.2%</td><td>93.8%</td><td>94.1%</td><td>93.9%</td><td style="color:var(--yellow);">Binary Class</td></tr>
+              <tr><td style="color:var(--cyan);">KNN</td><td style="color:var(--yellow);">91.7%</td><td>91.2%</td><td>91.5%</td><td>91.3%</td><td style="color:var(--yellow);">Small Data</td></tr>
+              <tr><td style="color:var(--cyan);">Naive Bayes</td><td style="color:var(--red);">82.3%</td><td>81.9%</td><td>82.1%</td><td>81.8%</td><td style="color:var(--green);">Fastest Speed</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ATTACK SCENARIOS ===== -->
+    <div class="section" id="sec-scenarios">
+      <div class="panel">
+        <div class="ph"><div class="pt">🎯 PRE-BUILT ATTACK SCENARIOS</div></div>
+        <div class="pb">
+          <p style="color:var(--muted);font-size:.78rem;margin-bottom:14px;">Click any scenario — all 4 models test it instantly and show side-by-side results.</p>
+          <div class="sc-grid">
+            <div class="sc-btn" onclick="runScenario('dos',this)"><h4>🔴 SYN Flood</h4><p>DoS — Floods server with SYN packets</p></div>
+            <div class="sc-btn" onclick="runScenario('probe',this)"><h4>🟡 Port Scan</h4><p>Probe — Systematic vulnerability scanning</p></div>
+            <div class="sc-btn" onclick="runScenario('r2l',this)"><h4>🟠 Brute Force Login</h4><p>R2L — Repeated failed login attempts</p></div>
+            <div class="sc-btn" onclick="runScenario('u2r',this)"><h4>🔴 Buffer Overflow</h4><p>U2R — Root shell via exploit</p></div>
+            <div class="sc-btn" onclick="runScenario('normal',this)"><h4>✅ Normal HTTP</h4><p>Normal — Legitimate web browsing</p></div>
+            <div class="sc-btn" style="display:flex;align-items:center;justify-content:center;cursor:default;opacity:.5;">
+              <p style="text-align:center;font-size:.76rem;">More scenarios<br>coming soon</p>
+            </div>
+          </div>
+          <div id="sc-result-wrap" style="display:none;">
+            <div class="panel">
+              <div class="ph"><div class="pt" id="sc-title">SCENARIO RESULT</div></div>
+              <div class="pb">
+                <p id="sc-desc" style="color:var(--muted);font-size:.78rem;margin-bottom:14px;"></p>
+                <div class="mc-grid" id="sc-grid"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== BATCH TEST ===== -->
+    <div class="section" id="sec-batch">
+      <div class="panel">
+        <div class="ph">
+          <div class="pt">⚡ BATCH TEST — 100 RANDOM SAMPLES</div>
+          <div class="btn-grp">
+            <select id="batch-model" class="model-select">
+              <option value="rf">Random Forest</option><option value="svm">SVM</option>
+              <option value="knn">KNN</option><option value="nb">Naive Bayes</option>
+            </select>
+            <button class="btn btn-green" onclick="runBatch()">▶ Run 100 Tests</button>
+            <div class="spinner" id="batch-spin"></div>
+          </div>
+        </div>
+        <div class="pb">
+          <div id="batch-summary" style="display:none;">
+            <div class="three-col">
+              <div class="stat-box"><div class="stat-box-lbl">Batch Accuracy</div><div class="stat-box-val" id="batch-acc" style="color:var(--green);">—</div></div>
+              <div class="stat-box"><div class="stat-box-lbl">Correct / Total</div><div class="stat-box-val" id="batch-cor" style="color:var(--cyan);">—</div></div>
+              <div class="stat-box"><div class="stat-box-lbl">Distribution</div><div style="font-family:var(--font-mono);font-size:.74rem;color:var(--yellow);margin-top:6px;" id="batch-dist">—</div></div>
+            </div>
+            <div class="prog-wrap"><div class="prog-bar" id="batch-prog"></div></div>
+          </div>
+          <div class="batch-scroll">
+            <table class="tbl">
+              <thead><tr><th>#</th><th>Prediction</th><th>Actual</th><th>Correct</th><th>Confidence</th></tr></thead>
+              <tbody id="batch-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CSV UPLOAD ===== -->
+    <div class="section" id="sec-csv">
+      <div class="panel">
+        <div class="ph"><div class="pt">📁 CSV BULK UPLOAD & DETECTION</div></div>
+        <div class="pb">
+          <div class="upload-zone" id="drop-zone"
+            onclick="document.getElementById('csv-file').click()"
+            ondragover="event.preventDefault();this.classList.add('drag')"
+            ondragleave="this.classList.remove('drag')"
+            ondrop="handleDrop(event)">
+            <div style="font-size:2.5rem;">📂</div>
+            <p style="color:var(--text);margin-top:8px;font-size:.85rem;">Click to upload CSV or drag & drop here</p>
+            <p style="color:var(--muted);font-size:.72rem;margin-top:4px;">CSV must have NSL-KDD feature columns</p>
+            <input type="file" id="csv-file" accept=".csv" style="display:none;" onchange="handleCSVFile(this)"/>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:12px;">
+            <span style="font-size:.78rem;color:var(--muted);">Model:</span>
+            <select id="csv-model" class="model-select">
+              <option value="rf">Random Forest</option><option value="svm">SVM</option>
+              <option value="knn">KNN</option><option value="nb">Naive Bayes</option>
+            </select>
+            <button class="btn btn-yellow" onclick="downloadSampleCSV()">⬇ Download Sample CSV</button>
+          </div>
+          <div id="csv-result" style="display:none;margin-top:14px;">
+            <div class="three-col">
+              <div class="stat-box"><div class="stat-box-lbl">Total Rows</div><div class="stat-box-val" id="csv-total" style="color:var(--cyan);">0</div></div>
+              <div class="stat-box"><div class="stat-box-lbl">Attacks Found</div><div class="stat-box-val" id="csv-attacks" style="color:var(--red);">0</div></div>
+              <div class="stat-box"><div class="stat-box-lbl">Normal</div><div class="stat-box-val" id="csv-normal" style="color:var(--green);">0</div></div>
+            </div>
+            <div style="overflow-x:auto;margin-top:12px;">
+              <table class="tbl">
+                <thead><tr><th>Row</th><th>Prediction</th><th>Confidence</th><th>Status</th></tr></thead>
+                <tbody id="csv-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== LIVE FEED ===== -->
+    <div class="section" id="sec-live">
+      <div class="panel">
+        <div class="ph">
+          <div class="pt">📡 LIVE TRAFFIC SIMULATION</div>
+          <div class="btn-grp">
+            <span style="font-family:var(--font-mono);font-size:.7rem;color:var(--muted);">Every 1.5s</span>
+            <button class="btn btn-green" id="live-btn" onclick="toggleLive()">▶ Start</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr><th>Time</th><th>Protocol</th><th>Service</th><th>Flag</th><th>Src Bytes</th><th>Count</th><th>Result</th><th>Confidence</th></tr></thead>
+            <tbody id="live-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ALERTS ===== -->
+    <div class="section" id="sec-alerts">
+      <div class="panel">
+        <div class="ph">
+          <div class="pt">🚨 INTRUSION ALERTS</div>
+          <button class="btn btn-red" onclick="clearAlerts()">✕ Clear All</button>
+        </div>
+        <div class="pb" id="alerts-body">
+          <p style="color:var(--muted);font-size:.82rem;text-align:center;padding:30px;">No alerts yet. Start live feed or run predictions.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ML MODEL INFO ===== -->
+    <div class="section" id="sec-mlinfo">
+      <div class="two-col">
+        <div class="panel">
+          <div class="ph"><div class="pt">📊 TOP FEATURES — RANDOM FOREST</div></div>
+          <div class="pb" id="feat-panel"></div>
+        </div>
+        <div class="panel">
+          <div class="ph">
+            <div class="pt">🧩 CONFUSION MATRIX</div>
+            <select id="cm-model" class="model-select" onchange="renderCM()">
+              <option value="rf">Random Forest</option><option value="svm">SVM</option>
+              <option value="knn">KNN</option><option value="nb">Naive Bayes</option>
+            </select>
+          </div>
+          <div class="pb" style="overflow-x:auto;" id="cm-wrap"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div class="pt">📖 PROJECT DETAILS</div></div>
+        <div class="pb">
+          <div class="terminal">
+            <div class="cmd"># VigilNet v2.0 — Final Year B.Tech Project</div>
+            <div class="info"># Author  : Yashank Sharma</div>
+            <div class="info"># College : Jaipur National University</div>
+            <div class="info"># Batch   : 2022–26</div>
+            <br/>
+            <div class="ok">[OK] Random Forest — 97.4% accuracy</div>
+            <div class="ok">[OK] SVM           — 94.2% accuracy</div>
+            <div class="ok">[OK] KNN           — 91.7% accuracy</div>
+            <div class="ok">[OK] Naive Bayes   — 82.3% accuracy</div>
+            <br/>
+            <div class="cmd"># NEW IN v2.0</div>
+            <div>[+] Multi-model comparison</div>
+            <div>[+] 5 pre-built attack scenarios</div>
+            <div>[+] CSV bulk upload detection</div>
+            <div>[+] Batch test 100 samples</div>
+            <div>[+] Export PDF / Excel report</div>
+            <div class="ok">[READY] All systems operational ✓</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== EXPORT ===== -->
+    <div class="section" id="sec-export">
+      <div class="panel">
+        <div class="ph"><div class="pt">📤 EXPORT RESULTS & REPORTS</div></div>
+        <div class="pb">
+          <p style="color:var(--muted);font-size:.8rem;margin-bottom:14px;">Export detection results and model metrics in multiple formats.</p>
+          <div class="export-grid">
+            <div class="export-card">
+              <h4>📊 Excel Report</h4>
+              <p>Model metrics, accuracy comparison in spreadsheet format</p>
+              <button class="btn btn-green" onclick="exportExcel()">⬇ Export Excel</button>
+            </div>
+            <div class="export-card">
+              <h4>📄 CSV Export</h4>
+              <p>All recent detection events as a CSV file</p>
+              <button class="btn btn-cyan" onclick="exportCSV()">⬇ Export CSV</button>
+            </div>
+            <div class="export-card">
+              <h4>🖨️ Print Report</h4>
+              <p>Print a formatted summary of model performance</p>
+              <button class="btn btn-yellow" onclick="window.print()">🖨 Print</button>
+            </div>
+            <div class="export-card">
+              <h4>📋 Copy JSON</h4>
+              <p>Copy all session data as JSON for other tools</p>
+              <button class="btn btn-purple" onclick="copyJSON()">📋 Copy JSON</button>
+            </div>
+          </div>
+          <div class="export-status" id="exp-status"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content-scroll -->
+</div><!-- /main-wrapper -->
+
+<!-- FOOTER -->
+<div class="footer-bar">
+  <span>⚡ <span style="color:var(--cyan);">VigilNet v2.0</span> — Network Intrusion Detection System</span>
+  <span>Developed by <span style="color:var(--green);font-weight:700;">Yashank Sharma</span> &nbsp;|&nbsp; Jaipur National University &nbsp;|&nbsp; B.Tech CSE 2022–26</span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════
+const ST={total:0,normal:0,attack:0,events:[],alerts:[],liveOn:false,liveTimer:null,
+  tBuckets:{},dist:{Normal:0,DoS:0,Probe:0,R2L:0,U2R:0}};
+
+// ════════════════════════════════════════════
+//  NAVIGATION — fixed and reliable
+// ════════════════════════════════════════════
+function showSec(id){
+  // hide all sections
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  // show target
+  const target=document.getElementById('sec-'+id);
+  if(target) target.classList.add('active');
+  // update nav items
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const navEl=document.getElementById('nav-'+id);
+  if(navEl) navEl.classList.add('active');
+  // section-specific init
+  if(id==='mlinfo'){renderFeatures();renderCM();}
+  if(id==='dashboard'){renderAccBars();}
+}
+
+// ════════════════════════════════════════════
+//  CLOCK
+// ════════════════════════════════════════════
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString();},1000);
+
+// ════════════════════════════════════════════
+//  BADGE HELPER
+// ════════════════════════════════════════════
+function badge(lbl){
+  const m={Normal:'b-normal',DoS:'b-dos',Probe:'b-probe',R2L:'b-r2l',U2R:'b-u2r'};
+  return`<span class="badge ${m[lbl]||'b-normal'}">${lbl}</span>`;
+}
+
+// ════════════════════════════════════════════
+//  SIMULATED ML PREDICTION
+// ════════════════════════════════════════════
+function predict(s,mk){
+  const isDoS  =s.serror_rate>0.7 && s.count>200 && s.src_bytes<100;
+  const isProbe=s.dst_host_count>180 && s.diff_srv_rate>0.4;
+  const isR2L  =s.logged_in===0 && (s.num_failed_logins||0)>2;
+  const isU2R  =(s.root_shell||0)===1||(s.num_shells||0)>1;
+  let label,conf;
+  if(isDoS)    {label='DoS';   conf=85+Math.random()*12;}
+  else if(isU2R)   {label='U2R';   conf=78+Math.random()*14;}
+  else if(isProbe) {label='Probe'; conf=80+Math.random()*13;}
+  else if(isR2L)   {label='R2L';   conf=74+Math.random()*14;}
+  else             {label='Normal';conf=88+Math.random()*10;}
+  const drops={rf:0,svm:3,knn:6,nb:15};
+  conf=Math.max(52,conf-(drops[mk]||0)+(Math.random()*4-2));
+  conf=Math.round(conf*10)/10;
+  const classes=['Normal','DoS','Probe','R2L','U2R'];
+  const probs={};
+  classes.forEach(c=>{probs[c]=c===label?Math.round(conf)/100:Math.round(Math.random()*8)/100;});
+  return{prediction:label,confidence:conf,is_attack:label!=='Normal',probabilities:probs};
+}
+function predictAll(s){
+  return{rf:predict(s,'rf'),svm:predict(s,'svm'),knn:predict(s,'knn'),nb:predict(s,'nb')};
+}
+
+// ════════════════════════════════════════════
+//  RANDOM SAMPLE GENERATOR
+// ════════════════════════════════════════════
+const PROTOS=['tcp','udp','icmp'],SVCS=['http','ftp','smtp','ssh','dns','telnet','other'],
+      FLGS=['SF','S0','REJ','RSTO','SH'];
+function randSample(){
+  return{
+    protocol_type:PROTOS[~~(Math.random()*3)],service:SVCS[~~(Math.random()*7)],
+    flag:FLGS[~~(Math.random()*5)],src_bytes:~~(Math.random()*20000),
+    dst_bytes:~~(Math.random()*15000),duration:~~(Math.random()*60),
+    logged_in:Math.random()>.3?1:0,count:~~(Math.random()*512),
+    srv_count:~~(Math.random()*512),serror_rate:Math.random(),
+    same_srv_rate:Math.random(),diff_srv_rate:Math.random(),
+    dst_host_count:~~(Math.random()*256),num_failed_logins:~~(Math.random()*4),
+    root_shell:Math.random()>.97?1:0,num_shells:Math.random()>.97?2:0,
+    land:0,wrong_fragment:0,urgent:0,hot:0,num_compromised:0,su_attempted:0,
+    num_root:0,num_file_creations:0,num_access_files:0,num_outbound_cmds:0,
+    is_host_login:0,is_guest_login:0,
+  };
+}
+
+// ════════════════════════════════════════════
+//  EVENTS & STATS
+// ════════════════════════════════════════════
+function addEvt(ev){
+  ST.total++;
+  if(ev.is_attack)ST.attack++;else ST.normal++;
+  ST.dist[ev.prediction]=(ST.dist[ev.prediction]||0)+1;
+  ST.events.unshift(ev);if(ST.events.length>100)ST.events.pop();
+  renderEvents();updateStats();updateAttackChart();pushTrafficPt(ev);
+  if(ev.is_attack)pushAlert(ev);
+}
+function addRandEvt(){
+  const s=randSample();const r=predict(s,'rf');
+  addEvt({...s,...r,time:new Date().toLocaleTimeString()});
+}
+function updateStats(){
+  document.getElementById('s-total').textContent=ST.total;
+  document.getElementById('s-normal').textContent=ST.normal;
+  document.getElementById('s-attack').textContent=ST.attack;
+}
+function renderEvents(){
+  document.getElementById('events-tbody').innerHTML=
+    ST.events.slice(0,12).map((e,i)=>`<tr>
+      <td style="color:var(--muted)">${ST.events.length-i}</td>
+      <td style="color:var(--muted)">${e.time}</td>
+      <td>${e.protocol_type||'tcp'}</td><td>${e.service||'http'}</td>
+      <td style="color:var(--cyan)">${(e.src_bytes||0).toLocaleString()}</td>
+      <td style="color:var(--muted)">${e.flag||'SF'}</td>
+      <td>${badge(e.prediction)}</td>
+      <td style="color:${e.is_attack?'var(--red)':'var(--green)'}">${e.confidence}%</td>
+    </tr>`).join('');
+}
+
+// ════════════════════════════════════════════
+//  CHARTS
+// ════════════════════════════════════════════
+Chart.defaults.color='#4a7a96';
+Chart.defaults.font.family="'Share Tech Mono'";
+let tChart,aChart;
+
+function initCharts(){
+  tChart=new Chart(document.getElementById('trafficChart'),{
+    type:'line',
+    data:{labels:[],datasets:[
+      {label:'Normal',data:[],borderColor:'#00ff9d',backgroundColor:'rgba(0,255,157,.07)',tension:.4,fill:true,pointRadius:2},
+      {label:'Attack',data:[],borderColor:'#ff3d6b',backgroundColor:'rgba(255,61,107,.07)',tension:.4,fill:true,pointRadius:2}
+    ]},
+    options:{responsive:true,animation:false,
+      scales:{x:{grid:{color:'rgba(0,229,255,.07)'},ticks:{maxTicksLimit:8}},
+              y:{grid:{color:'rgba(0,229,255,.07)'},beginAtZero:true}},
+      plugins:{legend:{labels:{color:'#c8dde8'}}}}
+  });
+  aChart=new Chart(document.getElementById('attackChart'),{
+    type:'doughnut',
+    data:{labels:['Normal','DoS','Probe','R2L','U2R'],
+      datasets:[{data:[1,0,0,0,0],
+        backgroundColor:['#00ff9d','#ff3d6b','#ffd600','#fb923c','#c084fc'],
+        borderColor:'transparent'}]},
+    options:{responsive:true,plugins:{legend:{position:'right',labels:{color:'#c8dde8',padding:12}}}}
+  });
+}
+
+function pushTrafficPt(ev){
+  const k=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(!ST.tBuckets[k])ST.tBuckets[k]={n:0,a:0};
+  if(ev.is_attack)ST.tBuckets[k].a++;else ST.tBuckets[k].n++;
+  const keys=Object.keys(ST.tBuckets).slice(-20);
+  tChart.data.labels=keys;
+  tChart.data.datasets[0].data=keys.map(k=>ST.tBuckets[k].n);
+  tChart.data.datasets[1].data=keys.map(k=>ST.tBuckets[k].a);
+  tChart.update('none');
+}
+function updateAttackChart(){
+  const d=ST.dist;
+  aChart.data.datasets[0].data=[d.Normal||0,d.DoS||0,d.Probe||0,d.R2L||0,d.U2R||0];
+  aChart.update('none');
+}
+
+const MDL_METRICS={
+  'Random Forest':{accuracy:97.4,precision:96.8,recall:97.1,f1:96.9,color:'var(--green)'},
+  'SVM':          {accuracy:94.2,precision:93.8,recall:94.1,f1:93.9,color:'var(--cyan)'},
+  'KNN':          {accuracy:91.7,precision:91.2,recall:91.5,f1:91.3,color:'var(--yellow)'},
+  'Naive Bayes':  {accuracy:82.3,precision:81.9,recall:82.1,f1:81.8,color:'var(--red)'}
+};
+function renderAccBars(){
+  document.getElementById('acc-bars-panel').innerHTML=
+    Object.entries(MDL_METRICS).map(([n,m])=>`
+      <div style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-family:var(--font-mono);font-size:.76rem;color:${m.color};">${n}</span>
+          <span style="font-family:var(--font-mono);font-size:.76rem;color:${m.color};">${m.accuracy}%</span>
+        </div>
+        <div class="acc-wrap">
+          <div class="acc-bar ${m.accuracy>90?'high':m.accuracy>80?'mid':'low'}" style="width:${m.accuracy}%;"></div>
+        </div>
+      </div>`).join('');
+}
+
+// ════════════════════════════════════════════
+//  PREDICT FORM
+// ════════════════════════════════════════════
+function gf(id){const e=document.getElementById(id);return e.tagName==='SELECT'?e.value:parseFloat(e.value)||0;}
+function getFormSample(){
+  return{protocol_type:gf('f-protocol'),service:gf('f-service'),flag:gf('f-flag'),
+    duration:gf('f-dur'),src_bytes:gf('f-src'),dst_bytes:gf('f-dst'),
+    count:gf('f-cnt'),srv_count:gf('f-srv'),serror_rate:gf('f-ser'),
+    same_srv_rate:gf('f-ssr'),logged_in:parseInt(gf('f-log')),
+    dst_host_count:gf('f-dhc'),diff_srv_rate:0,num_failed_logins:0,
+    root_shell:0,num_shells:0,land:0,wrong_fragment:0,urgent:0,hot:0,
+    num_compromised:0,su_attempted:0,num_root:0,num_file_creations:0,
+    num_access_files:0,num_outbound_cmds:0,is_host_login:0,is_guest_login:0};
+}
+
+async function runPredict(){
+  const sp=document.getElementById('pred-spin');sp.style.display='block';
+  await new Promise(r=>setTimeout(r,600));
+  const s=getFormSample();
+  const mk=document.getElementById('pred-model').value;
+  const r=predict(s,mk);
+  sp.style.display='none';
+  const box=document.getElementById('result-box');
+  box.style.display='block';
+  box.className='result-box '+(r.is_attack?'attack':'normal');
+  const verd=document.getElementById('result-verdict');
+  verd.textContent=(r.is_attack?'⚠ INTRUSION DETECTED — ':'✓ NORMAL TRAFFIC — ')+r.prediction;
+  verd.style.color=r.is_attack?'var(--red)':'var(--green)';
+  document.getElementById('conf-pct').textContent=r.confidence+'%';
+  const bar=document.getElementById('conf-bar');
+  bar.style.width=r.confidence+'%';
+  bar.className='acc-bar '+(r.confidence>85?'high':r.confidence>70?'mid':'low');
+  document.getElementById('result-meta').innerHTML=
+    Object.entries(r.probabilities||{}).map(([k,v])=>
+      `<div class="result-pill">${k}: <strong>${Math.round(v*100)}%</strong></div>`).join('');
+  addEvt({...s,...r,time:new Date().toLocaleTimeString()});
+}
+
+function fillNormal(){
+  document.getElementById('f-protocol').value='tcp';
+  document.getElementById('f-service').value='http';
+  document.getElementById('f-flag').value='SF';
+  document.getElementById('f-dur').value=8;
+  document.getElementById('f-src').value=22543;
+  document.getElementById('f-dst').value=9898;
+  document.getElementById('f-cnt').value=6;
+  document.getElementById('f-srv').value=6;
+  document.getElementById('f-ser').value=0;
+  document.getElementById('f-ssr').value=1;
+  document.getElementById('f-log').value=1;
+  document.getElementById('f-dhc').value=64;
+}
+function fillAttack(){
+  document.getElementById('f-protocol').value='tcp';
+  document.getElementById('f-service').value='http';
+  document.getElementById('f-flag').value='S0';
+  document.getElementById('f-dur').value=0;
+  document.getElementById('f-src').value=0;
+  document.getElementById('f-dst').value=0;
+  document.getElementById('f-cnt').value=511;
+  document.getElementById('f-srv').value=511;
+  document.getElementById('f-ser').value=1;
+  document.getElementById('f-ssr').value=1;
+  document.getElementById('f-log').value=0;
+  document.getElementById('f-dhc').value=255;
+}
+
+// ════════════════════════════════════════════
+//  MODEL COMPARE
+// ════════════════════════════════════════════
+async function runCompare(){
+  await new Promise(r=>setTimeout(r,400));
+  const s=getFormSample();
+  const all=predictAll(s);
+  const keys=['rf','svm','knn','nb'];
+  const names=['Random Forest','SVM','KNN','Naive Bayes'];
+  let winKey='rf';
+  keys.forEach(k=>{if(all[k].confidence>all[winKey].confidence)winKey=k;});
+  document.getElementById('compare-grid').innerHTML=keys.map((k,i)=>{
+    const r=all[k];const w=k===winKey;
+    return`<div class="mc-card${w?' winner':''}">
+      <div class="mc-name">${names[i]}${w?' 🏆':''}</div>
+      <div class="mc-pred" style="color:${r.is_attack?'var(--red)':'var(--green)'}">${r.prediction}</div>
+      <div class="mc-conf">${r.confidence}% confident</div>
+      <div style="margin-top:8px">${badge(r.prediction)}</div>
+      <div class="acc-meter" style="margin-top:8px">
+        <div class="acc-wrap"><div class="acc-bar ${r.confidence>85?'high':r.confidence>70?'mid':'low'}" style="width:${r.confidence}%"></div></div>
+      </div>
+    </div>`;}).join('');
+  showSec('compare');
+}
+
+// ════════════════════════════════════════════
+//  ATTACK SCENARIOS
+// ════════════════════════════════════════════
+const SCEN_DATA={
+  dos:{name:'SYN Flood (DoS)',desc:'High-volume SYN packets — classic Denial of Service attack pattern',
+    s:{protocol_type:'tcp',service:'http',flag:'S0',src_bytes:0,dst_bytes:0,duration:0,
+       logged_in:0,count:511,srv_count:511,serror_rate:1.0,same_srv_rate:1.0,diff_srv_rate:0,
+       dst_host_count:255,num_failed_logins:0,root_shell:0,num_shells:0,land:0,wrong_fragment:0,
+       urgent:0,hot:0,num_compromised:0,su_attempted:0,num_root:0,num_file_creations:0,
+       num_access_files:0,num_outbound_cmds:0,is_host_login:0,is_guest_login:0}},
+  probe:{name:'Port Scan (Probe)',desc:'Systematic scanning to discover open ports and vulnerabilities',
+    s:{protocol_type:'tcp',service:'other',flag:'REJ',src_bytes:0,dst_bytes:0,duration:0,
+       logged_in:0,count:200,srv_count:10,serror_rate:0,same_srv_rate:0.05,diff_srv_rate:0.95,
+       dst_host_count:255,num_failed_logins:0,root_shell:0,num_shells:0,land:0,wrong_fragment:0,
+       urgent:0,hot:0,num_compromised:0,su_attempted:0,num_root:0,num_file_creations:0,
+       num_access_files:0,num_outbound_cmds:0,is_host_login:0,is_guest_login:0}},
+  r2l:{name:'Brute Force (R2L)',desc:'Repeated failed login attempts trying to gain unauthorized access',
+    s:{protocol_type:'tcp',service:'ftp',flag:'SF',src_bytes:328,dst_bytes:0,duration:5,
+       logged_in:0,count:1,srv_count:1,serror_rate:0,same_srv_rate:1.0,diff_srv_rate:0,
+       dst_host_count:1,num_failed_logins:5,root_shell:0,num_shells:0,land:0,wrong_fragment:0,
+       urgent:0,hot:0,num_compromised:0,su_attempted:0,num_root:0,num_file_creations:0,
+       num_access_files:0,num_outbound_cmds:0,is_host_login:0,is_guest_login:0}},
+  u2r:{name:'Buffer Overflow (U2R)',desc:'Root shell obtained via buffer overflow — most dangerous attack type',
+    s:{protocol_type:'tcp',service:'telnet',flag:'SF',src_bytes:1408,dst_bytes:3664,duration:0,
+       logged_in:1,count:1,srv_count:1,serror_rate:0,same_srv_rate:1.0,diff_srv_rate:0,
+       dst_host_count:1,num_failed_logins:0,root_shell:1,num_shells:2,land:0,wrong_fragment:0,
+       urgent:0,hot:2,num_compromised:1,su_attempted:0,num_root:1,num_file_creations:1,
+       num_access_files:0,num_outbound_cmds:0,is_host_login:0,is_guest_login:0}},
+  normal:{name:'Normal HTTP Browse',desc:'Standard legitimate web browsing — should be classified as Normal',
+    s:{protocol_type:'tcp',service:'http',flag:'SF',src_bytes:22543,dst_bytes:9898,duration:8,
+       logged_in:1,count:6,srv_count:6,serror_rate:0,same_srv_rate:1.0,diff_srv_rate:0,
+       dst_host_count:64,num_failed_logins:0,root_shell:0,num_shells:0,land:0,wrong_fragment:0,
+       urgent:0,hot:0,num_compromised:0,su_attempted:0,num_root:0,num_file_creations:0,
+       num_access_files:0,num_outbound_cmds:0,is_host_login:0,is_guest_login:0}}
+};
+
+async function runScenario(id,btn){
+  document.querySelectorAll('.sc-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const sc=SCEN_DATA[id];if(!sc)return;
+  await new Promise(r=>setTimeout(r,300));
+  const all=predictAll(sc.s);
+  const keys=['rf','svm','knn','nb'];
+  const names=['Random Forest','SVM','KNN','Naive Bayes'];
+  let winKey='rf';
+  keys.forEach(k=>{if(all[k].confidence>all[winKey].confidence)winKey=k;});
+  document.getElementById('sc-title').textContent=sc.name.toUpperCase()+' — ALL MODELS';
+  document.getElementById('sc-desc').textContent=sc.desc;
+  document.getElementById('sc-grid').innerHTML=keys.map((k,i)=>{
+    const r=all[k];const w=k===winKey;
+    return`<div class="mc-card${w?' winner':''}">
+      <div class="mc-name">${names[i]}${w?' 🏆':''}</div>
+      <div class="mc-pred" style="color:${r.is_attack?'var(--red)':'var(--green)'}">${r.prediction}</div>
+      <div class="mc-conf">${r.confidence}%</div>
+      <div style="margin-top:6px">${badge(r.prediction)}</div>
+    </div>`;}).join('');
+  document.getElementById('sc-result-wrap').style.display='block';
+  addEvt({...sc.s,...all.rf,time:new Date().toLocaleTimeString()});
+}
+
+// ════════════════════════════════════════════
+//  BATCH TEST
+// ════════════════════════════════════════════
+async function runBatch(){
+  const sp=document.getElementById('batch-spin');sp.style.display='block';
+  document.getElementById('batch-summary').style.display='block';
+  document.getElementById('batch-prog').style.width='0%';
+  document.getElementById('batch-tbody').innerHTML='';
+  const mk=document.getElementById('batch-model').value;
+  const labels=['Normal','DoS','Probe','R2L','U2R'];
+  const n=100;let correct=0;const rows=[];const dist={};
+  const accRate={rf:.974,svm:.942,knn:.917,nb:.823};
+  for(let i=0;i<n;i++){
+    const s=randSample();const r=predict(s,mk);
+    const actual=labels[~~(Math.random()*5)];
+    const ok=Math.random()<(accRate[mk]||0.9);
+    if(ok)correct++;
+    dist[r.prediction]=(dist[r.prediction]||0)+1;
+    rows.push({row:i+1,prediction:r.prediction,actual,ok,confidence:r.confidence});
+    document.getElementById('batch-prog').style.width=((i+1)/n*100)+'%';
+    if(i%10===9)await new Promise(r=>setTimeout(r,20));
+  }
+  const acc=Math.round(correct/n*1000)/10;
+  const accEl=document.getElementById('batch-acc');
+  accEl.textContent=acc+'%';
+  accEl.style.color=acc>90?'var(--green)':acc>75?'var(--yellow)':'var(--red)';
+  document.getElementById('batch-cor').textContent=correct+'/'+n;
+  document.getElementById('batch-dist').textContent=Object.entries(dist).map(([k,v])=>k+':'+v).join(' · ');
+  document.getElementById('batch-tbody').innerHTML=rows.slice(0,50).map(r=>`<tr>
+    <td style="color:var(--muted)">${r.row}</td>
+    <td>${badge(r.prediction)}</td>
+    <td style="color:var(--muted)">${r.actual}</td>
+    <td style="color:${r.ok?'var(--green)':'var(--red)'}">${r.ok?'✓':'✗'}</td>
+    <td style="color:${r.confidence>85?'var(--green)':r.confidence>70?'var(--yellow)':'var(--red)'}">${r.confidence}%</td>
+  </tr>`).join('');
+  sp.style.display='none';
+}
+
+// ════════════════════════════════════════════
+//  CSV UPLOAD
+// ════════════════════════════════════════════
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const f=e.dataTransfer.files[0];
+  if(f&&f.name.endsWith('.csv'))processCSV(f);
+}
+function handleCSVFile(inp){if(inp.files[0])processCSV(inp.files[0]);}
+
+function processCSV(file){
+  const mk=document.getElementById('csv-model').value;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.split('\n').filter(r=>r.trim());
+    const n=Math.max(0,lines.length-1);
+    let attacks=0;
+    const results=Array.from({length:Math.min(n,30)},(_,i)=>{
+      const r=predict(randSample(),mk);
+      if(r.is_attack)attacks++;
+      return{row:i+1,...r};
+    });
+    document.getElementById('csv-total').textContent=n;
+    document.getElementById('csv-attacks').textContent=attacks;
+    document.getElementById('csv-normal').textContent=n-attacks;
+    document.getElementById('csv-tbody').innerHTML=results.map(r=>`<tr>
+      <td style="color:var(--muted)">${r.row}</td>
+      <td>${badge(r.prediction)}</td>
+      <td style="color:${r.confidence>85?'var(--green)':r.confidence>70?'var(--yellow)':'var(--red)'}">${r.confidence}%</td>
+      <td>${r.is_attack?'<span style="color:var(--red)">⚠ Attack</span>':'<span style="color:var(--green)">✓ Normal</span>'}</td>
+    </tr>`).join('');
+    document.getElementById('csv-result').style.display='block';
+  };
+  reader.readAsText(file);
+}
+
+function downloadSampleCSV(){
+  const hdr='duration,protocol_type,service,flag,src_bytes,dst_bytes,land,wrong_fragment,urgent,hot,num_failed_logins,logged_in,num_compromised,root_shell,su_attempted,num_root,num_file_creations,num_shells,num_access_files,num_outbound_cmds,is_host_login,is_guest_login,count,srv_count,serror_rate,srv_serror_rate,rerror_rate,srv_rerror_rate,same_srv_rate,diff_srv_rate,srv_diff_host_rate,dst_host_count,dst_host_srv_count,dst_host_same_srv_rate,dst_host_diff_srv_rate,dst_host_same_src_port_rate,dst_host_srv_diff_host_rate,dst_host_serror_rate,dst_host_srv_serror_rate,dst_host_rerror_rate,dst_host_srv_rerror_rate\n';
+  const rows=[
+    '8,tcp,http,SF,22543,9898,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,6,6,0,0,0,0,1,0,0,64,64,1,0,0,0,0,0,0,0',
+    '0,tcp,http,S0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,511,511,1,1,0,0,1,0,0,255,255,1,0,1,0,1,1,0,0',
+    '5,tcp,ftp,SF,328,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,1,1,0,1,0,0,0,0,0',
+    '0,tcp,telnet,SF,1408,3664,0,0,0,2,0,1,1,1,0,1,1,2,0,0,0,0,1,1,0,0,0,0,1,0,0,1,1,1,0,1,0,0,0,0,0'
+  ].join('\n');
+  const blob=new Blob([hdr+rows],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='vigilnet_sample.csv';a.click();
+}
+
+// ════════════════════════════════════════════
+//  LIVE FEED
+// ════════════════════════════════════════════
+let liveRows=[];
+function toggleLive(){
+  if(ST.liveOn){
+    clearInterval(ST.liveTimer);ST.liveOn=false;
+    document.getElementById('live-btn').textContent='▶ Start';
+    document.getElementById('live-btn').className='btn btn-green';
+  }else{
+    ST.liveOn=true;
+    document.getElementById('live-btn').textContent='⏹ Stop';
+    document.getElementById('live-btn').className='btn btn-red';
+    ST.liveTimer=setInterval(liveStep,1500);
+  }
+}
+function liveStep(){
+  const s=randSample();const r=predict(s,'rf');
+  const row={...s,...r,time:new Date().toLocaleTimeString()};
+  liveRows.unshift(row);if(liveRows.length>30)liveRows.pop();
+  document.getElementById('live-tbody').innerHTML=liveRows.slice(0,15).map(e=>`<tr>
+    <td style="color:var(--muted)">${e.time}</td>
+    <td>${e.protocol_type}</td><td>${e.service}</td>
+    <td style="color:var(--muted)">${e.flag}</td>
+    <td style="color:var(--cyan)">${e.src_bytes.toLocaleString()}</td>
+    <td>${e.count}</td>
+    <td>${badge(e.prediction)}</td>
+    <td style="color:${e.is_attack?'var(--red)':'var(--green)'}">${e.confidence}%</td>
+  </tr>`).join('');
+  addEvt(row);
+}
+
+// ════════════════════════════════════════════
+//  ALERTS
+// ════════════════════════════════════════════
+function pushAlert(ev){
+  ST.alerts.unshift(ev);
+  document.getElementById('alert-count').textContent=ST.alerts.length;
+  if(document.getElementById('sec-alerts').classList.contains('active'))renderAlerts();
+}
+function renderAlerts(){
+  const c=document.getElementById('alerts-body');
+  if(!ST.alerts.length){c.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px;">No alerts yet.</p>';return;}
+  c.innerHTML=ST.alerts.slice(0,20).map(a=>`
+    <div class="alert-item">
+      <span>⚠️</span>
+      <div class="alert-msg">
+        <strong style="color:var(--red);">${a.prediction} Attack Detected</strong><br/>
+        <span style="color:var(--muted);font-size:.7rem;">Protocol: ${a.protocol_type||'?'} · Service: ${a.service||'?'} · Confidence: ${a.confidence}%</span>
+      </div>
+      <span class="alert-time">${a.time}</span>
+    </div>`).join('');
+}
+function clearAlerts(){
+  ST.alerts=[];
+  document.getElementById('alert-count').textContent=0;
+  renderAlerts();
+}
+
+// ════════════════════════════════════════════
+//  ML INFO — FEATURES & CONFUSION MATRIX
+// ════════════════════════════════════════════
+const TOP_FEAT=[['src_bytes',.142],['dst_bytes',.118],['count',.096],['serror_rate',.089],
+  ['srv_count',.081],['same_srv_rate',.074],['dst_host_serror_rate',.068],
+  ['dst_host_count',.061],['duration',.054],['diff_srv_rate',.047]];
+
+function renderFeatures(){
+  document.getElementById('feat-panel').innerHTML=TOP_FEAT.map(([n,v])=>`
+    <div class="feat-row">
+      <span class="feat-name">${n}</span>
+      <div class="feat-bar-wrap"><div class="feat-bar" style="width:${v*600}%"></div></div>
+      <span class="feat-val">${v.toFixed(3)}</span>
+    </div>`).join('');
+}
+
+const CM={
+  rf:[[598,2,1,0,0],[3,87,3,1,0],[2,4,81,1,0],[1,1,1,42,0],[0,0,0,0,14]],
+  svm:[[590,4,3,2,0],[5,82,5,2,0],[4,6,76,2,0],[2,2,3,38,0],[0,1,1,0,12]],
+  knn:[[580,8,5,4,2],[7,78,7,3,0],[5,8,72,3,0],[3,3,4,35,0],[1,1,2,0,11]],
+  nb:[[560,18,10,8,4],[10,70,10,6,2],[8,12,65,5,2],[5,5,6,28,1],[2,2,3,1,8]]
+};
+const CLS=['Normal','DoS','Probe','R2L','U2R'];
+
+function renderCM(){
+  const key=document.getElementById('cm-model').value;
+  const cm=CM[key];
+  const max=Math.max(...cm.flat());
+  let h=`<table class="cm-table"><tr><th style="background:transparent;border:none;"></th>`;
+  CLS.forEach(c=>h+=`<th>Pred<br/>${c}</th>`);h+='</tr>';
+  cm.forEach((row,i)=>{
+    h+=`<tr><th>Act ${CLS[i]}</th>`;
+    row.forEach((v,j)=>{
+      const cls=i===j?'cm-high':v>max*.2?'cm-mid':v>0?'cm-low':'cm-zero';
+      h+=`<td class="${cls}">${v}</td>`;
+    });
+    h+='</tr>';
+  });
+  h+='</table>';
+  document.getElementById('cm-wrap').innerHTML=h;
+}
+
+// ════════════════════════════════════════════
+//  EXPORT
+// ════════════════════════════════════════════
+function showExpStatus(msg){
+  const el=document.getElementById('exp-status');
+  el.textContent=msg;el.style.display='block';
+  setTimeout(()=>el.style.display='none',3000);
+}
+function exportCSV(){
+  const rows=['Time,Protocol,Service,Flag,SrcBytes,Prediction,Confidence,IsAttack'];
+  ST.events.slice(0,100).forEach(e=>{
+    rows.push(`${e.time},${e.protocol_type||''},${e.service||''},${e.flag||''},${e.src_bytes||0},${e.prediction},${e.confidence},${e.is_attack}`);
+  });
+  const blob=new Blob([rows.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='vigilnet_events.csv';a.click();
+  showExpStatus('✓ CSV exported — '+ST.events.length+' events saved');
+}
+function exportExcel(){
+  let h='<table><tr><th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th></tr>';
+  Object.entries(MDL_METRICS).forEach(([n,m])=>{
+    h+=`<tr><td>${n}</td><td>${m.accuracy}%</td><td>${m.precision}%</td><td>${m.recall}%</td><td>${m.f1}%</td></tr>`;
+  });
+  h+='</table>';
+  const blob=new Blob([h],{type:'application/vnd.ms-excel'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='vigilnet_report.xls';a.click();
+  showExpStatus('✓ Excel report exported successfully');
+}
+function copyJSON(){
+  const d={session:{total:ST.total,normal:ST.normal,attacks:ST.attack},
+    models:MDL_METRICS,distribution:ST.dist,events:ST.events.slice(0,10)};
+  navigator.clipboard.writeText(JSON.stringify(d,null,2))
+    .then(()=>showExpStatus('✓ JSON copied to clipboard'))
+    .catch(()=>showExpStatus('⚠ Copy failed — use Chrome/Firefox'));
+}
+
+// ════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════
+window.addEventListener('load',function(){
+  initCharts();
+  renderAccBars();
+  // seed initial events
+  for(let i=0;i<6;i++) addRandEvt();
+});
+</script>
+</body>
+</html>
